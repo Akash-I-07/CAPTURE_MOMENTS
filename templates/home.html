@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Home - Capture Moments{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-content">
+    <h1 class="hero-title">Capture Your Perfect Moments</h1>
+    <p class="hero-subtitle">Professional photography services across Andhra Pradesh & Telangana</p>
+    <div class="hero-buttons">
+      <a href="{{ url_for('book') }}" class="btn btn-primary">Book a Photographer</a>
+      <a href="{{ url_for('show_photographers') }}" class="btn btn-secondary">View Photographers</a>
+    </div>
+  </div>
+  <div class="hero-image">
+    <img src="https://images.pexels.com/photos/1264210/pexels-photo-1264210.jpeg" alt="Professional Photography">
+  </div>
+</section>
+
+<section class="featured-photographers">
+  <div class="container">
+    <h2 class="section-title">Featured Photographers</h2>
+    <div class="photographers-grid">
+      {% for photographer in photographers %}
+      <div class="photographer-card">
+        <div class="photographer-image">
+          <img src="{{ url_for('static', filename='images/' + photographer.image) }}" alt="{{ photographer.name }}">
+        </div>
+        <div class="photographer-info">
+          <h3>{{ photographer.name }}</h3>
+          <p class="location"><i class="fas fa-map-marker-alt"></i> {{ photographer.location }}</p>
+          <p class="skills">{{ photographer.skills | join(', ') }}</p>
+          <p class="price">{{ photographer.price_range }}</p>
+          <a href="{{ url_for('book') }}" class="btn btn-small">Book Now</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="text-center">
+      <a href="{{ url_for('show_photographers') }}" class="btn btn-outline">View All Photographers</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
