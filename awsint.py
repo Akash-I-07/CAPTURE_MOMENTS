@@ -1,26 +1,21 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from collections import UserString
+from flask import Flask, flash, redirect, render_template, request, jsonify, session, url_for 
+import boto3
+import uuid
+from datetime import datetime
+
 from flask_mail import Mail, Message
-from datetime import timedelta
-import hashlib
-from dotenv import load_dotenv
-import os
-load_dotenv()  # ✅ This loads .env variables into the environment
+
+from app import hash_password
+
+# Step 1: Create the Flask app instance
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY")  # Loaded from .env
+# Step 2: Connect to DynamoDB
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')  # Replace with your region
 
-# Flask-Mail configuration
-app.config['MAIL_SERVER'] = os.environ.get("MAIL_SERVER", 'smtp.gmail.com')
-app.config['MAIL_PORT'] = int(os.environ.get("MAIL_PORT", 587))
-app.config['MAIL_USE_TLS'] = os.environ.get("MAIL_USE_TLS", 'True') == 'True'
-app.config['MAIL_USERNAME'] = os.environ.get("MAIL_USERNAME")
-app.config['MAIL_PASSWORD'] = os.environ.get("MAIL_PASSWORD")
-app.permanent_session_lifetime = timedelta(minutes=30)
-
-# Sample user storage (mock db)
-users = {}
-
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+# Tables
+photographers_table = dynamodb.Table('photographers')
+bookings_table = dynamodb.Table('booking')
 
 # Photographers data
 photographers = [
@@ -109,6 +104,8 @@ portfolio_categories = {
 @app.route('/')
 def home():
     return render_template('home.html', photographers=photographers[:3])
+
+users = {}
 
 #Login page
 @app.route('/login', methods=['GET', 'POST'])
@@ -204,4 +201,3 @@ def about():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-
