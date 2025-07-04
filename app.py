@@ -1,9 +1,19 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask_mail import Mail, Message
 from datetime import timedelta
 import hashlib
-
+from dotenv import load_dotenv
+import os
+load_dotenv()  # ✅ This loads .env variables into the environment
 app = Flask(__name__)
-app.secret_key = 'capture_moments_secret_key_2025'
+app.secret_key = os.environ.get("FLASK_SECRET_KEY")  # Loaded from .env
+
+# Flask-Mail configuration
+app.config['MAIL_SERVER'] = os.environ.get("MAIL_SERVER", 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.environ.get("MAIL_PORT", 587))
+app.config['MAIL_USE_TLS'] = os.environ.get("MAIL_USE_TLS", 'True') == 'True'
+app.config['MAIL_USERNAME'] = os.environ.get("MAIL_USERNAME")
+app.config['MAIL_PASSWORD'] = os.environ.get("MAIL_PASSWORD")
 app.permanent_session_lifetime = timedelta(minutes=30)
 
 # Sample user storage (mock db)
@@ -100,31 +110,32 @@ portfolio_categories = {
 def home():
     return render_template('home.html', photographers=photographers[:3])
 
+#Login page
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
+        # Handle login credentials here
         username = request.form['username']
         password = request.form['password']
-        if username in users and users[username] == hash_password(password):
+        # Example check (replace with DB check)
+        if username == 'admin' and password == '1234':
             session['user'] = username
-            flash('Login successful!', 'success')
-            return redirect(url_for('home'))
+            return redirect('/show-photographers')
         else:
-            flash('Invalid username or password!', 'error')
+            
+            ('Invalid login credentials')
+            return redirect('/login')
     return render_template('login.html')
 
-@app.route('/signup', methods=['GET', 'POST'])
+#Signup
+@app.route('/signup', methods=['POST'])
 def signup():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        if username in users:
-            flash('Username already exists!', 'error')
-        else:
-            users[username] = hash_password(password)
-            flash('Account created! Please login.', 'success')
-            return redirect(url_for('login'))
-    return render_template('signup.html')
+    # Handle new user registration
+    username = request.form['newUsername']
+    password = request.form['newPassword']
+    # Save user to database or file (not shown here)
+    flash('Signup successful! You can now log in.')
+    return redirect('/login')
 
 @app.route('/logout')
 def logout():
@@ -134,9 +145,7 @@ def logout():
 
 @app.route('/book', methods=['GET', 'POST'])
 def book():
-    if 'user' not in session:
-        flash('Please login to book a photographer.', 'error')
-        return redirect(url_for('login'))
+    
     if request.method == 'POST':
         photographer_id = request.form.get('photographer_id')
         date = request.form.get('date')
@@ -146,6 +155,33 @@ def book():
         flash(f'Booking confirmed with {photographer_name} for {event_type} on {date} at {location}!', 'success')
         return redirect(url_for('dashboard'))
     return render_template('book.html', photographers=photographers, availability_data=availability_data)
+
+@app.route('/confirmation', methods=['POST'])
+def confirmation():
+    package = request.args.get("package") or request.form.get("package")
+    booking = session.get("booking_details")
+
+    if booking:
+        msg = Message(
+            subject="📸 Booking Confirmed - Capture Moments",
+            sender=app.config['MAIL_USERNAME'],
+            recipients=[booking["email"]],
+            body=f"""Hello {booking['full_name']},
+
+Thank you for booking with Capture Moments!
+
+✔ Photographer ID: {booking['photographer_id']}
+📅 Date: {booking['date']}
+📦 Package: {package}
+📍 Location: {booking['location']}
+
+We’ll follow up with details and confirmations. Feel free to reach out if you need anything.
+
+— The Capture Moments Team"""
+        )
+        Mail.send(msg)
+
+    return render_template("confirmation.html", booking=booking, package=package)
 
 @app.route('/photographers')
 def show_photographers():
@@ -167,4 +203,5 @@ def about():
     return render_template('about.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
+
